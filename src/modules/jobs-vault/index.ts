@@ -38,11 +38,32 @@ export class JobsVault {
     while (true) {
       try {
         await this.schedule(keys as Keys[], job as Jobs);
-      } catch (error) {}
+      } catch (error) {
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+
+        await this.start();
+      }
     }
   }
 
   async schedule(keys: Keys[], job: Jobs) {}
+
+  async rotate(job: Jobs, keys: Keys) {}
+
+  evaluateStatus(keys: Keys[]) {
+    const latestKey = keys.reduce((p, c) => (c.version > p.version ? c : p));
+
+    const now = Date.now();
+    const expiry = latestKey.expires_at.getTime();
+    const margin = ENV_CONFIG.JOBS_TTL * 1000;
+
+    const timeToRotate = expiry - margin - now;
+
+    return {
+      msRemaining: Math.max(0, timeToRotate),
+      shouldRotate: timeToRotate <= 0,
+    };
+  }
 
   async init() {
     try {
@@ -52,6 +73,8 @@ export class JobsVault {
       jwksCache.save(keys);
     } catch (error) {
       await new Promise((resolve) => setTimeout(resolve, 5000));
+
+      await this.init();
     }
 
     await this.start();
