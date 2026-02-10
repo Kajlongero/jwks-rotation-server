@@ -31,13 +31,16 @@ export class JobsWorkers {
       .where("type", "=", type)
       .forUpdate()
       .skipLocked()
-      .execute();
+      .selectAll()
+      .executeTakeFirst();
   }
 
-  async createJob(payload: CreateJobInput) {
+  async createJob(payload: CreateJobInput, tx?: Transaction<Database>) {
+    const executor = database ?? tx;
+
     const { ttl, type, version, nextRunAt } = payload;
 
-    const job = await database
+    const job = await executor
       .insertInto("jobs")
       .values({
         id: randomUUID(),
