@@ -4,8 +4,8 @@
   "description": "",
   "main": "src/main.ts",
   "scripts": {
-    "dev": "nodemon --watch 'src/**/*.ts' --exec ts-node src/index.ts",
-    "start": "node dist/index.js",
+    "dev": "nodemon --watch 'src/**/*.ts' --exec ts-node src/main.ts",
+    "start": "node dist/main.js",
     "build": "tsc"
   },
   "keywords": [],
