@@ -9,6 +9,20 @@ import type { CreateJobInput } from "./interfaces/create-job.interface";
 import type { UpdateJobRunInput } from "./interfaces/update-job-run.interface";
 
 export class JobsWorkers {
+  private static instance: JobsWorkers;
+
+  private constructor() {
+    if (JobsWorkers.instance) return JobsWorkers.instance;
+
+    return this;
+  }
+
+  static getInstance() {
+    if (!JobsWorkers.instance) JobsWorkers.instance = new JobsWorkers();
+
+    return JobsWorkers.instance;
+  }
+
   async getJobsByType(type: string, tx?: Transaction<Database>) {
     const executor = database ?? tx;
 

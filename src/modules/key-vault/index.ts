@@ -12,6 +12,20 @@ import type { Transaction } from "kysely";
 import type { CreateBatchKeysInput } from "./interfaces/create-keys.interface";
 
 export class KeyVault {
+  private static instance: KeyVault;
+
+  private constructor() {
+    if (KeyVault.instance) return KeyVault.instance;
+
+    return this;
+  }
+
+  static getInstance() {
+    if (!KeyVault.instance) KeyVault.instance = new KeyVault();
+
+    return KeyVault.instance;
+  }
+
   async getActiveKeys(tx?: Transaction<Database>) {
     const executor = database ?? tx;
 

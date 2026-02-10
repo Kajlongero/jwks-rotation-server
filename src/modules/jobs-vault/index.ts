@@ -1,5 +1,5 @@
 export class JobsVault {
-  static instance: JobsVault;
+  private static instance: JobsVault;
 
   private constructor() {
     if (JobsVault.instance) return JobsVault.instance;
