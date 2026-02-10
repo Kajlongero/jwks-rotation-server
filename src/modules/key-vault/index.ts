@@ -69,6 +69,17 @@ export class KeyVault {
       .execute();
   }
 
+  async setInactiveKeysByVersion(version: number, tx?: Transaction<Database>) {
+    const executor = database ?? tx;
+
+    return await executor
+      .updateTable("keys")
+      .where("version", "=", version)
+      .set("is_active", false)
+      .returningAll()
+      .execute();
+  }
+
   async deleteOldKeys(tx?: Transaction<Database>) {
     const executor = database ?? tx;
 
