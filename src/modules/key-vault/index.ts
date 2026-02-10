@@ -55,7 +55,7 @@ export class KeyVault {
         const input: CipherInput = {
           iv: 12,
           data: privKey,
-          algorithm: "aes-128-gcm",
+          algorithm: "aes-256-gcm",
         };
 
         const encryptedPrivate = await cipher(input);
