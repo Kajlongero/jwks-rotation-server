@@ -68,4 +68,14 @@ export class KeyVault {
       .returningAll()
       .execute();
   }
+
+  async deleteOldKeys(tx?: Transaction<Database>) {
+    const executor = database ?? tx;
+
+    return await executor
+      ?.deleteFrom("keys")
+      .where("deletable_at", "<=", sql<Date>`NOW()`)
+      .returningAll()
+      .execute();
+  }
 }
