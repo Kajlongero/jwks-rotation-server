@@ -59,4 +59,14 @@ export class JobsWorkers {
       .returningAll()
       .executeTakeFirst();
   }
+
+  async deleteJobsByType(type: string, tx?: Transaction<Database>) {
+    const executor = database ?? tx;
+
+    return executor
+      .deleteFrom("jobs")
+      .where("type", "=", type)
+      .returningAll()
+      .executeTakeFirst();
+  }
 }
