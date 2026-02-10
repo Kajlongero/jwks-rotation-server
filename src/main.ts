@@ -12,7 +12,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 (async () => {
-  await JobsVault.getInstance().schedule();
+  await JobsVault.getInstance().init();
 
   app.listen(ENV_CONFIG.PORT, () => {
     `App running at port: ${ENV_CONFIG.PORT}`;
