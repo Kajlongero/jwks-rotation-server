@@ -1,0 +1,1 @@
+export const JOBS_CACHE_KEY = "JOBS_CACHE_JEYT";
