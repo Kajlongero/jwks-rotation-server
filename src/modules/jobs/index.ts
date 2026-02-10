@@ -2,11 +2,11 @@ import { sql } from "kysely";
 import { randomUUID } from "node:crypto";
 
 import { database } from "../../database/definition";
-import { GenerateKeys } from "../../infrastructure/functions/generate-keys.function";
 
 import type { Database } from "../../database";
 import type { Transaction } from "kysely";
-import { CreateJobInput } from "./interfaces/create-job.interface";
+import type { CreateJobInput } from "./interfaces/create-job.interface";
+import type { UpdateJobRunInput } from "./interfaces/update-job-run.interface";
 
 export class JobsWorkers {
   async getJobsByType(type: string, tx?: Transaction<Database>) {
@@ -39,5 +39,24 @@ export class JobsWorkers {
       .executeTakeFirst();
 
     return job;
+  }
+
+  async updateNextRunAt(
+    payload: UpdateJobRunInput,
+    tx?: Transaction<Database>,
+  ) {
+    const executor = database ?? tx;
+
+    const { id, counter, nextRunAt, version } = payload;
+
+    return await executor
+      .updateTable("jobs")
+      .where("id", "=", id)
+      .set("counter", counter)
+      .set("version", version)
+      .set("last_run_at", sql<Date>`NOW()`)
+      .set("next_run_at", nextRunAt)
+      .returningAll()
+      .executeTakeFirst();
   }
 }
