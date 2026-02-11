@@ -31,55 +31,6 @@ export class JobsVault {
     return JobsVault.instance;
   }
 
-  async start() {
-    const job = jobsCache.retrieve();
-    const keys = jwksCache.retrieve();
-
-    while (true) {
-      try {
-        await this.schedule(keys as Keys[], job as Jobs);
-      } catch (error) {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-
-        await this.start();
-      }
-    }
-  }
-
-  async schedule(keys: Keys[], job: Jobs) {}
-
-  async rotate(job: Jobs, keys: Keys) {}
-
-  evaluateStatus(keys: Keys[]) {
-    const latestKey = keys.reduce((p, c) => (c.version > p.version ? c : p));
-
-    const now = Date.now();
-    const expiry = latestKey.expires_at.getTime();
-    const margin = ENV_CONFIG.JOBS_TTL * 1000;
-
-    const timeToRotate = expiry - margin - now;
-
-    return {
-      msRemaining: Math.max(0, timeToRotate),
-      shouldRotate: timeToRotate <= 0,
-    };
-  }
-
-  async init() {
-    try {
-      const { job, keys } = await this.bootstrap();
-
-      jobsCache.save(job as Jobs, ENV_CONFIG.JOBS_TTL);
-      jwksCache.save(keys);
-    } catch (error) {
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-
-      await this.init();
-    }
-
-    await this.start();
-  }
-
   async bootstrap() {
     return await database.transaction().execute(async (tx) => {
       let job = await jWorkers.getJobsByType("KEY_ROTATION", tx);
@@ -135,5 +86,130 @@ export class JobsVault {
 
       return { job: job as Jobs, keys };
     });
+  }
+
+  async init() {
+    try {
+      const { job, keys } = await this.bootstrap();
+
+      jobsCache.save(job as Jobs, ENV_CONFIG.JOBS_TTL);
+      jwksCache.save(keys);
+
+      this.start();
+    } catch (error) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+
+      await this.init();
+    }
+  }
+
+  async start() {
+    while (true) {
+      try {
+        const job = jobsCache.retrieve() as Jobs;
+        const keys = jwksCache.retrieve() as Keys[];
+
+        if (!job || !keys) {
+          const sync = await this.bootstrap();
+
+          jobsCache.save(sync.job as Jobs, ENV_CONFIG.JOBS_TTL);
+          jwksCache.save(sync.keys);
+
+          continue;
+        }
+
+        await this.schedule(keys, job);
+      } catch (error) {
+        await new Promise((res) => setTimeout(res, 5000));
+      }
+    }
+  }
+
+  async schedule(keys: Keys[], job: Jobs) {
+    const { msRemaining, shouldRotate } = this.evaluateStatus(keys);
+
+    if (shouldRotate) {
+      const latestKey = keys.reduce((p, c) => (c.version > p.version ? c : p));
+
+      const now = Date.now();
+      const expiry = latestKey.expires_at.getTime();
+
+      const exactRemaining = Math.max(0, expiry - now) + 100;
+
+      if (exactRemaining > 0)
+        await new Promise((resolve) => setTimeout(resolve, exactRemaining));
+
+      await this.rotate(job, keys);
+    } else {
+      const sleep = Math.min(msRemaining, ENV_CONFIG.JOBS_TTL * 1000);
+
+      const result = await database.transaction().execute(async (tx) => {
+        await kVault.deleteOldKeys(tx);
+
+        const updatedJob = await jWorkers.updateNextRunAt(
+          {
+            id: job.id,
+            counter: job.counter + 1,
+            version: job.version,
+            nextRunAt: new Date(Date.now() + sleep),
+          },
+          tx,
+        );
+
+        return { job: updatedJob };
+      });
+
+      jobsCache.save(result.job as Jobs);
+
+      await new Promise((resolve) => setTimeout(resolve, sleep));
+    }
+  }
+
+  async rotate(job: Jobs, keys: Keys[]) {
+    const latestKey = keys.reduce((p, c) => (c.version > p.version ? c : p));
+
+    const result = await database.transaction().execute(async (tx) => {
+      await kVault.setGraceTime(latestKey, latestKey.version, tx);
+      await kVault.setInactiveKeysByVersion(latestKey.version);
+
+      const payload = {
+        ver: latestKey.version + 1,
+        ttl: ENV_CONFIG.TTL,
+        reason: "AUTOMATIC",
+      };
+
+      const keys = await kVault.batch(payload, tx);
+
+      const updatedJob = await jWorkers.updateNextRunAt({
+        id: job.id,
+        counter: job.counter + 1,
+        version: latestKey.version + 1,
+        nextRunAt: new Date(Date.now() + 1000 * ENV_CONFIG.JOBS_TTL),
+      });
+
+      await kVault.deleteOldKeys(tx);
+
+      return { keys, job: updatedJob };
+    });
+
+    jwksCache.save(result.keys);
+    jobsCache.save(result.job as Jobs);
+
+    return;
+  }
+
+  evaluateStatus(keys: Keys[]) {
+    const latestKey = keys.reduce((p, c) => (c.version > p.version ? c : p));
+
+    const now = Date.now();
+    const expiry = latestKey.expires_at.getTime();
+    const margin = ENV_CONFIG.JOBS_TTL * 1000;
+
+    const timeToRotate = expiry - margin - now;
+
+    return {
+      msRemaining: Math.max(0, timeToRotate),
+      shouldRotate: timeToRotate <= 0,
+    };
   }
 }
