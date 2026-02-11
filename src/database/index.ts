@@ -18,9 +18,9 @@ export interface KeysTable {
   version: number;
   is_active: boolean;
   rotation_reason: "AUTOMATIC" | "FORCED";
-  created_at: ColumnType<Date, string | Date, never>;
-  expires_at: ColumnType<Date, string | Date, never>;
-  deletable_at: ColumnType<Date, string | Date, never>;
+  created_at: ColumnType<Date, Date | string, Date | string>;
+  expires_at: ColumnType<Date, Date | string, Date | string>;
+  deletable_at: ColumnType<Date, Date | string, Date | string>;
 }
 
 export interface JobsTable {
