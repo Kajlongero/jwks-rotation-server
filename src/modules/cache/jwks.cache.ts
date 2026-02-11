@@ -7,6 +7,7 @@ import {
   JWKS_PRIVATE_KEY,
 } from "./keys/jwks-cache.keys";
 
+import type { JWK } from "jose";
 import type { Keys } from "../../database";
 
 export class JwksCache {
@@ -45,5 +46,28 @@ export class JwksCache {
 
     this.cache.set(JWKS_SET, keys);
     this.cache.set(JWKS_PUBLIC_KEY, publicJwk);
+  }
+
+  saveAndClear(keys: Keys[]) {
+    const now = Date.now();
+
+    const old = this.cache.get(JWKS_SET) as Keys[];
+
+    const merge = [...keys, ...old];
+
+    const toDelete = merge.filter((k) => k.expires_at.getTime() < now);
+    const filtered = merge.filter((k) => k.expires_at.getTime() > now);
+
+    const publicJwks = filtered.map((k) => k.jwk);
+
+    const active = keys.reduce((p, c) => (c.version > p.version ? c : p));
+
+    this.cache.set(JWKS_SET, merge);
+    this.cache.set(JWKS_ACTIVE_KEY, active);
+    this.cache.set(JWKS_PUBLIC_KEY, publicJwks);
+
+    toDelete.forEach((k) => {
+      this.cache.del(JWKS_PRIVATE_KEY(k.id));
+    });
   }
 }
