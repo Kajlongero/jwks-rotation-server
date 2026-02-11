@@ -52,26 +52,29 @@ export class JwksCache {
     this.cache.set(JWKS_PUBLIC_KEY, publicJwk);
   }
 
-  saveAndClear(keys: Keys[]) {
-    const now = Date.now();
+  saveAndSync(keys: Keys[]) {
+    const publicJwks = keys.map((k) => k.jwk);
+    const activeKey = keys.find((k) => k.is_active);
 
-    const old = this.cache.get(JWKS_SET) as Keys[];
+    const currentKeysInCache = this.cache.get<Keys[]>(JWKS_SET) ?? [];
+    const newKids = new Set(keys.map((k) => k.kid));
 
-    const merge = [...keys, ...old];
-
-    const toDelete = merge.filter((k) => k.expires_at.getTime() < now);
-    const filtered = merge.filter((k) => k.expires_at.getTime() > now);
-
-    const publicJwks = filtered.map((k) => k.jwk);
-
-    const active = keys.reduce((p, c) => (c.version > p.version ? c : p));
-
-    this.cache.set(JWKS_SET, merge);
-    this.cache.set(JWKS_ACTIVE_KEY, active);
-    this.cache.set(JWKS_PUBLIC_KEY, publicJwks);
-
-    toDelete.forEach((k) => {
-      this.cache.del(JWKS_PRIVATE_KEY(k.id));
+    currentKeysInCache.forEach((oldKey) => {
+      if (!newKids.has(oldKey.kid)) {
+        this.cache.del(JWKS_PRIVATE_KEY(oldKey.kid));
+      }
     });
+
+    keys.forEach((k) => {
+      this.cache.set(JWKS_PRIVATE_KEY(k.kid), {
+        kid: k.kid,
+        enc_pk: k.enc_pk,
+        isActive: k.is_active,
+      });
+    });
+
+    this.cache.set(JWKS_SET, keys);
+    this.cache.set(JWKS_ACTIVE_KEY, activeKey);
+    this.cache.set(JWKS_PUBLIC_KEY, publicJwks);
   }
 }
