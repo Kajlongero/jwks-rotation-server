@@ -27,6 +27,10 @@ export class JwksCache {
     return JwksCache.instance;
   }
 
+  getPublicJwks(): JWK[] {
+    return this.cache.get(JWKS_PUBLIC_KEY) as JWK[];
+  }
+
   retrieve(): Keys[] | undefined {
     if (this.cache.has(JWKS_SET)) return this.cache.get(JWKS_SET) as Keys[];
   }
