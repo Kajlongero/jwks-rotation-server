@@ -2,13 +2,12 @@ import { sql } from "kysely";
 import { randomUUID } from "node:crypto";
 
 import { cipher } from "../../infrastructure/functions/cipher";
-import { decipher } from "../../infrastructure/functions/decipher";
 import { database } from "../../database/definition";
 import { GenerateKeys } from "../../infrastructure/functions/generate-keys.function";
 
-import type { Database } from "../../database";
 import type { CipherInput } from "../../infrastructure/interfaces/cipher.interface";
 import type { Transaction } from "kysely";
+import type { Database, Keys } from "../../database";
 import type { CreateBatchKeysInput } from "./interfaces/create-keys.interface";
 
 export class KeyVault {
@@ -94,11 +93,35 @@ export class KeyVault {
       .execute();
   }
 
+  async setGraceTime(key: Keys, version: number, tx?: Transaction<Database>) {
+    const executor = database ?? tx;
+
+    const now = new Date();
+    const expiresAt = new Date(key.expires_at);
+    const originalDeletableAt = new Date(key.deletable_at);
+
+    const driftMs = now.getTime() - expiresAt.getTime();
+
+    const finalDeletableAt =
+      driftMs > 0
+        ? new Date(originalDeletableAt.getTime() + driftMs)
+        : originalDeletableAt;
+
+    return await executor
+      .updateTable("keys")
+      .set({
+        is_active: false,
+        deletable_at: sql<Date>`${finalDeletableAt}`,
+      })
+      .where("version", "=", version)
+      .execute();
+  }
+
   async deleteOldKeys(tx?: Transaction<Database>) {
     const executor = database ?? tx;
 
     return await executor
-      ?.deleteFrom("keys")
+      .deleteFrom("keys")
       .where("deletable_at", "<=", sql<Date>`NOW()`)
       .returningAll()
       .execute();
