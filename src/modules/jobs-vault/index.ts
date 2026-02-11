@@ -93,7 +93,7 @@ export class JobsVault {
       const { job, keys } = await this.bootstrap();
 
       jobsCache.save(job as Jobs, ENV_CONFIG.JOBS_TTL);
-      jwksCache.save(keys);
+      jwksCache.saveAndClear(keys);
 
       this.start();
     } catch (error) {
@@ -113,7 +113,7 @@ export class JobsVault {
           const sync = await this.bootstrap();
 
           jobsCache.save(sync.job as Jobs, ENV_CONFIG.JOBS_TTL);
-          jwksCache.save(sync.keys);
+          jwksCache.saveAndClear(sync.keys);
 
           continue;
         }
@@ -192,8 +192,8 @@ export class JobsVault {
       return { keys, job: updatedJob };
     });
 
-    jwksCache.save(result.keys);
     jobsCache.save(result.job as Jobs);
+    jwksCache.saveAndClear(result.keys);
 
     return;
   }
