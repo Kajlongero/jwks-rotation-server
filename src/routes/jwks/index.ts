@@ -10,3 +10,5 @@ JWKSRouter.get("/.well-known/jwks.json", async (req, res, next) => {
 
   return res.status(200).json({ keys: data });
 });
+
+export { JWKSRouter };
