@@ -12,9 +12,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 (async () => {
-  await JobsVault.getInstance().init();
+  const vault = JobsVault.getInstance();
+
+  await vault.init();
 
   app.listen(ENV_CONFIG.PORT, () => {
-    `App running at port: ${ENV_CONFIG.PORT}`;
+    console.log(`App running at port: ${ENV_CONFIG.PORT}`);
   });
 })();
