@@ -7,6 +7,7 @@ import { ECSignJWK, OKPSignJWK, RSASignJWK } from "../types/jwks.type";
 export interface Database {
   keys: KeysTable;
   jobs: JobsTable;
+  sector_identifiers: SectorIdentifiersTable;
 }
 
 export interface KeysTable {
@@ -34,23 +35,13 @@ export interface JobsTable {
   next_run_at: ColumnType<Date, Date | string, Date | string>;
 }
 
-export interface OidcClientsTable {
-  id: Generated<string>;
-  client_id: string;
-  client_secret_hash: string;
-  sector_identifier_uri: string | null;
-  created_at: Generated<Date>;
-
-  client_name?: string;
-  updated_at?: Generated<Date>;
-}
-
 export interface SectorIdentifiersTable {
   id: Generated<string>;
-  redirect_uris: string;
   sector_uri_path: string;
-  client_owner_id: string;
-  created_at: Generated<Date>;
+
+  redirect_uris: string[];
+
+  created_at: ColumnType<Date, Date | string, Date | string>;
 }
 
 export type Keys = Selectable<KeysTable>;
@@ -60,9 +51,6 @@ export type UpdateKeys = Updateable<KeysTable>;
 export type Jobs = Selectable<JobsTable>;
 export type NewJobs = Insertable<JobsTable>;
 export type UpdateJobs = Updateable<JobsTable>;
-
-export type Client = Selectable<OidcClientsTable>;
-export type NewClient = Insertable<OidcClientsTable>;
 
 export type Sector = Selectable<SectorIdentifiersTable>;
 export type NewSector = Insertable<SectorIdentifiersTable>;

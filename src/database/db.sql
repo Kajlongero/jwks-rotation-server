@@ -38,25 +38,11 @@ CREATE INDEX idx_keys_deletable_at ON keys (deletable_at);
 CREATE INDEX idx_jobs_next_run_at ON jobs (next_run_at);
 
 CREATE TABLE
-  oidc_clients (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-    client_id TEXT UNIQUE NOT NULL,
-    client_secret BYTEA NOT NULL,
-    client_name TEXT,
-    sector_identifier_uri TEXT,
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    created_at TIMESTAMPTZ DEFAULT NOW()
-  );
-
-CREATE TABLE
   sector_identifiers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-    client_owner_id UUID NOT NULL REFERENCES oidc_clients (id) ON DELETE CASCADE,
     sector_uri_path TEXT UNIQUE NOT NULL,
-    redirect_uris JSONB NOT NULL,
+    redirect_uris TEXT[] NOT NULL DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT NOW()
   );
-
-CREATE INDEX idx_oidc_clients_client_id ON oidc_clients (client_id);
 
 CREATE INDEX idx_sector_path ON sector_identifiers (sector_uri_path);
