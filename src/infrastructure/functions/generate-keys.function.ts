@@ -103,8 +103,8 @@ async function createPair(
     const kid = await calculateJwkThumbprint(publicJWK);
 
     return {
-      public: { ...publicJWK, alg, kid, use: "enc", key_ops: ["encrypt"] },
-      private: { ...privateJWK, alg, kid, use: "enc", key_ops: ["decrypt"] },
+      public: { ...publicJWK, alg, kid, use: "enc" },
+      private: { ...privateJWK, alg, kid, use: "enc" },
     };
   } catch (error: any) {
     return null;
