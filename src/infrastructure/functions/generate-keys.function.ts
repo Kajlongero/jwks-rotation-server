@@ -40,14 +40,12 @@ async function GenerateSigningKeys() {
         alg,
         kid,
         use: "sig",
-        key_ops: ["verify"],
       },
       private: {
         ...privateJWK,
         alg,
         kid,
         use: "sig",
-        key_ops: ["sign"],
       },
     });
   }
